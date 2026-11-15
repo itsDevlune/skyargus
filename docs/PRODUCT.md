@@ -1,0 +1,2 @@
+# Product
+Argus is a Django infrared sky workspace for search → dated frames → marking → evidence → immutable reports. The full supplied specification is retained in BUILD_REQUEST.md. No mandatory landing page, login, AI API or generated sky imagery. Public cutouts and catalog data are distinct from session-private notes. Current delivery is an integrated development application, not the full 70-feature scientific release.

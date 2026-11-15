@@ -1,0 +1,472 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block explorer_active %}active{% endblock %}
+{% block content %}
+<main id="main" class="workspace" aria-label="Scientific sky workspace">
+  <section class="search-panel" aria-label="Search and field request">
+    <form id="search-form">
+      <div class="search-toolbar">
+        <div class="source-control">
+          <label for="source">Source</label
+          ><select id="source">
+            <option value="spherex">SPHEREx · infrared</option>
+            <option value="neossat">NEOSSat · optical raw</option>
+          </select>
+        </div>
+        <div class="object-control">
+          <label for="object">Object name</label>
+          <div class="input-row">
+            <input
+              id="object"
+              placeholder="Object name or use coordinates"
+              autocomplete="off"
+            /><button id="resolve" type="button">Resolve</button>
+          </div>
+        </div>
+        <fieldset class="fov-control">
+          <legend>Requested field <span>arcmin</span></legend>
+          <label class="sr-only" for="width">FOV width in arcminutes</label
+          ><input
+            id="width"
+            type="number"
+            min="1"
+            max="20"
+            step="0.5"
+            value="6"
+            aria-label="Field width arcminutes"
+          /><span aria-hidden="true">×</span
+          ><label class="sr-only" for="height">FOV height in arcminutes</label
+          ><input
+            id="height"
+            type="number"
+            min="1"
+            max="20"
+            step="0.5"
+            value="6"
+            aria-label="Field height arcminutes"
+          />
+        </fieldset>
+        <details id="request-details" class="request-details">
+          <summary>Request settings</summary>
+          <div class="request-popover">
+            <div class="popover-heading">
+              <strong>Field request</strong
+              ><span class="muted">ICRS · explicit units</span>
+            </div>
+            <label for="unit">RA / Dec units</label
+            ><select id="unit">
+              <option value="deg">Decimal degrees</option>
+              <option value="hourangle">
+                RA hours · Dec degrees (sexagesimal)
+              </option>
+            </select>
+            <div class="two">
+              <div>
+                <label for="ra">Right ascension</label
+                ><input id="ra" value="269.452075" required />
+              </div>
+              <div>
+                <label for="dec">Declination</label
+                ><input id="dec" value="4.693391" required />
+              </div>
+            </div>
+            <div id="fov-presets" class="chips">
+              <span>Field presets</span
+              ><button type="button" data-fov="3">3′</button
+              ><button type="button" data-fov="6">6′</button
+              ><button type="button" data-fov="12">12′</button>
+            </div>
+            <div class="two">
+              <div>
+                <label for="release">Release</label
+                ><select id="release">
+                  <option value="dr1">DR1</option>
+                  <option value="qr3">QR3</option>
+                </select>
+              </div>
+              <div>
+                <label for="detector">Detector</label
+                ><select id="detector">
+                  <option value="1">1 · 0.75–1.09 µm</option>
+                  <option value="2">2 · 1.10–1.62 µm</option>
+                  <option value="3">3 · 1.63–2.41 µm</option>
+                  <option value="4">4 · 2.42–3.82 µm</option>
+                  <option value="5">5 · 3.83–4.41 µm</option>
+                  <option value="6">6 · 4.42–5.00 µm</option>
+                </select>
+              </div>
+            </div>
+            <div class="two">
+              <div>
+                <label for="start">From (UTC)</label
+                ><input type="date" id="start" />
+              </div>
+              <div>
+                <label for="end">Through (UTC, inclusive)</label
+                ><input type="date" id="end" />
+              </div>
+            </div>
+            <details class="examples">
+              <summary>Example targets</summary>
+              <div id="targets" class="targets">
+                <button type="button" data-name="Barnard's Star">
+                  Barnard’s Star</button
+                ><button type="button" data-name="Epsilon Indi B">
+                  Epsilon Indi B</button
+                ><button type="button" data-name="WISE J085510.83-071442.5">
+                  WISE 0855</button
+                ><button type="button" data-name="RW Aur">RW Aurigae</button
+                ><button type="button" data-name="R Dra">R Draconis</button>
+              </div>
+              <p class="tiny">
+                Reference positions are not current ephemerides. Proper motion
+                and unresolved companions need care.
+              </p>
+            </details>
+            <p class="tiny">
+              Limits: 1–20′ full width/height; 100 metadata records; up to 8
+              temporally spread cutouts. Selection spans returned metadata,
+              which may be truncated. Pan and zoom never fetch a new field.
+            </p>
+          </div>
+        </details>
+        <button class="primary load" type="submit">
+          Load observations <span aria-hidden="true">↗</span></button
+        ><button type="button" id="cancel" hidden>Cancel</button>
+      </div>
+      <div class="request-status">
+        <p id="identity">
+          Resolve an object or enter ICRS coordinates in Coordinates & filters.
+        </p>
+        <span id="request-pending" hidden
+          >Field changed · image unchanged until Load</span
+        >
+      </div>
+    </form>
+  </section>
+
+  <section class="viewer-panel" aria-label="Sky cutout workspace">
+    <div class="viewer-top">
+      <div class="field-heading">
+        <span class="section-label">SKY EXPLORER</span>
+        <h1 id="field-title">Choose a field to begin</h1>
+      </div>
+      <div class="workspace-navigation" aria-label="Workspace panels">
+        <button type="button" id="open-observations" aria-pressed="false">
+          Observations <span id="observation-count">0</span></button
+        ><button type="button" id="open-analysis" aria-pressed="false">
+          Analysis</button
+        ><button type="button" id="open-evidence" aria-pressed="false">
+          Evidence</button
+        ><span class="badge" id="release-label">SPHEREx · DR1</span>
+      </div>
+    </div>
+    <div class="viewer-tools">
+      <div class="tool-group">
+        <button id="pan" class="selected" title="Drag within the loaded image">
+          Pan</button
+        ><button id="mark" title="Mark a position and open source evidence">
+          ＋ Mark</button
+        ><button
+          id="fit-image"
+          title="Fit the complete loaded image without cropping"
+        >
+          Fit Image</button
+        ><button
+          id="native-pixels"
+          title="One loaded-grid pixel per CSS screen pixel; original FITS arrays are separate"
+        >
+          Native Pixels</button
+        ><button id="reset" title="Reset pan, zoom and display contrast">
+          Reset</button
+        ><button id="return-target" title="Return to searched target position">
+          Target ⌖</button
+        ><label class="inline"
+          ><input id="toggle-target" type="checkbox" checked /> Target
+          marker</label
+        ><label class="inline"
+          ><input id="toggle-hips" type="checkbox" checked /> HiPS Sky</label
+        ><span id="zoom-readout" class="muted">Fit</span>
+      </div>
+      <div class="tool-group">
+        <label for="mode" class="sr-only">Comparison mode</label
+        ><select id="mode">
+          <option value="single">Single exposure</option>
+          <option value="blink">A/B blink</option>
+          <option value="side">Side by side</option>
+          <option value="swipe">Swipe comparison</option>
+          <option value="mosaic">Mosaic / Spectral (HiPS)</option></select
+        ><button
+          id="fullscreen"
+          aria-label="Enter fullscreen"
+          title="Enter fullscreen"
+        >
+          ⛶
+        </button>
+      </div>
+    </div>
+    <div class="data-context">
+      <span id="geometry-summary">No field loaded</span
+      ><span id="bandpass-summary">Single exposures · no stacking</span>
+    </div>
+    <div id="partial-summary" hidden></div>
+    <div id="sky" class="sky">
+      <canvas
+        id="viewer"
+        aria-label="Scientific image. Pan, zoom and frame controls are available outside the canvas."
+      ></canvas>
+      <div id="empty" class="empty">
+        <div class="empty-orbit" aria-hidden="true">＋</div>
+        <h2>A field of possibilities.</h2>
+        <p>Resolve a target or enter coordinates, then Load observations.</p>
+        <span>No imagery loaded · no simulated sky</span>
+      </div>
+      <div class="orientation" aria-hidden="true">N ↑<br />E ←</div>
+      <div id="cursor" class="cursor">Move over the image for coordinates</div>
+      <div class="sky-label" id="sky-label">Real archive observations</div>
+      <div class="zoom-controls">
+        <button id="zoom-in" aria-label="Zoom in">＋</button
+        ><button id="zoom-out" aria-label="Zoom out">−</button>
+      </div>
+    </div>
+    <div class="status-strip">
+      <span id="status" role="status" aria-live="polite">Ready to explore</span
+      ><span id="frame-summary">No dated frames loaded</span>
+    </div>
+    <div class="timeline">
+      <div class="play-controls">
+        <button id="previous" aria-label="Previous frame">‹</button
+        ><button id="play" class="play" aria-label="Play or pause">▶</button
+        ><button id="next" aria-label="Next frame">›</button
+        ><label for="speed" class="sr-only">Playback interval</label
+        ><select id="speed">
+          <option value="1200">1.2 s/frame</option>
+          <option value="600">0.6 s/frame</option>
+          <option value="2400">2.4 s/frame</option></select
+        ><label class="inline"
+          ><input id="loop" type="checkbox" checked /> Loop</label
+        >
+      </div>
+      <div class="timeline-track">
+        <input
+          id="timeline"
+          type="range"
+          min="0"
+          max="0"
+          value="0"
+          aria-label="Observation frame"
+        />
+        <div>
+          <span id="first-date">—</span><span id="baseline">Baseline —</span
+          ><span id="last-date">—</span>
+        </div>
+      </div>
+      <span id="count" class="tabular">0 / 0</span>
+    </div>
+    <details class="display-workspace" open>
+      <summary>Display & wavelength · comparison settings</summary>
+      <div class="lower-tools">
+        <label for="interpolation">Display</label
+        ><select id="interpolation" aria-label="Display interpolation">
+          <option value="nearest">Nearest-neighbour (pixel-crisp)</option>
+          <option value="smooth">Smooth (bilinear)</option></select
+        ><label for="stretch-fn">Stretch</label
+        ><select id="stretch-fn" aria-label="Stretch function">
+          <option value="asinh">arcsinh</option>
+          <option value="linear">Linear</option>
+          <option value="log">Logarithmic</option></select
+        ><label for="mosaic-view">HiPS Layer</label
+        ><select id="mosaic-view" aria-label="HiPS Mosaic Layer">
+          <option value="layer62_log">Layer 62 (3.3 μm) · Log / Inferno</option>
+          <option value="layer62_viridis">
+            Layer 62 (3.3 μm) · Log / Viridis
+          </option>
+          <option value="median_inferno">
+            Wavelength Median · Log / Inferno
+          </option>
+        </select>
+        ><label for="stretch">Contrast</label
+        ><input
+          id="stretch"
+          type="range"
+          min="0.5"
+          max="2"
+          step="0.1"
+          value="1"
+        /><button id="contrast-reset">Reset contrast</button
+        ><label for="ab">Compare B</label
+        ><select id="ab" aria-label="B observation">
+          <option>No frames</option></select
+        ><label for="swipe" class="sr-only">Swipe position</label
+        ><input id="swipe" type="range" min="0" max="100" value="50" /><button
+          id="state-link"
+        >
+          Copy view link
+        </button>
+      </div>
+    </details>
+  </section>
+
+  <aside
+    id="workspace-panel"
+    class="workspace-panel"
+    hidden
+    aria-label="Workspace inspector"
+  >
+    <div class="panel-heading">
+      <h2 id="panel-title">Evidence</h2>
+      <button id="expand-panel" type="button" aria-expanded="false" aria-controls="workspace-panel">Expand panel</button>
+      <button id="close-panel" aria-label="Close panel">✕</button>
+    </div>
+    <section
+      id="evidence-panel"
+      class="inspector"
+      aria-label="Observation and source evidence"
+    >
+      <p class="tiny">
+        Single-exposure evidence. A visual change is a question, not a
+        discovery.
+      </p>
+      <div id="evidence">
+        <p class="muted">
+          Load a field and select a source or request metadata.
+        </p>
+      </div>
+      <details open class="annotation">
+        <summary>Candidate notebook</summary>
+        <p class="tiny" id="selected-point">
+          Choose Mark, then select a point in the image.
+        </p>
+        <label for="classification">Classification</label
+        ><select id="classification">
+          <option>unsure</option>
+          <option>possible motion</option>
+          <option>brightness change</option>
+          <option>artifact</option></select
+        ><label for="note">Observation notes</label
+        ><textarea
+          id="note"
+          rows="3"
+          maxlength="4000"
+          placeholder="What changed? What else could explain it?"
+        ></textarea>
+        <div class="two">
+          <button id="save-mark">Save annotation</button>
+          <button id="clear-marks" type="button">Clear annotations</button>
+        </div>
+        <div id="marks"></div>
+      </details>
+      <details>
+        <summary>Reference context</summary>
+        <p class="tiny">
+          Gaia DR3 is an optical catalog at J2016.0. Positions are not
+          propagated; no infrared brightness comparison is implied.
+        </p>
+        <button id="gaia">Query Gaia DR3</button
+        ><label class="inline"
+          ><input type="checkbox" id="gaia-visible" checked /> Show catalog
+          overlay</label
+        >
+        <div id="gaia-result" class="tiny"></div>
+        <p class="tiny">AllWISE infrared catalog · cyan squares. Positions are not propagated to the exposure epoch; markers do not establish source associations. Up to 200 sources per catalog.</p>
+        <button id="wise" type="button">Query AllWISE</button>
+        <label class="inline"><input type="checkbox" id="wise-visible" checked /> Show AllWISE overlay</label>
+        <div id="wise-result" class="tiny" role="status"></div>
+      </details>
+      <div class="report-save">
+        <label for="report-title">Investigation title</label
+        ><input
+          id="report-title"
+          value="Infrared sky investigation"
+          maxlength="160"
+        /><button id="save-report" class="primary">Save evidence report</button>
+        <p class="tiny">
+          Immutable snapshot · private to this session. Sharing is a separate
+          action. Clearing cookies loses editing access.
+        </p>
+      </div>
+      <div class="science-note">
+        <span>ⓘ</span>
+        <p>
+          Check response, alignment, flags and artifacts before interpreting
+          changes. No discovery, orbit or hazard is inferred.
+        </p>
+      </div>
+    </section>
+    <section
+      id="observations-panel"
+      class="observation-list"
+      hidden
+      aria-label="Observation log"
+    >
+      <p id="observation-policy" class="tiny"></p>
+      <div id="observations">
+        <p class="muted">
+          Load a field to inspect observation IDs, coverage, dates and original
+          files.
+        </p>
+      </div>
+    </section>
+    <section id="analysis-content" hidden aria-label="Analysis tools">
+      <p id="analysis-context" class="tiny">No source or field selected.</p>
+      <details id="real-cube-workbench">
+        <summary>Real 102-channel DR1 cube</summary>
+        <p class="tiny">Loads the real 512×512 mosaic tile covering the loaded field (up to 384 MiB). This is a multi-date coadd; it does not replace the dated exposure viewer.</p>
+        <button id="load-real-cube" type="button">Load 102-channel cube</button>
+        <p id="cube-status" role="status"></p>
+        <div id="cube-workspace" hidden>
+          <label for="cube-channel">Wavelength channel</label>
+          <input id="cube-channel" type="range" min="0" max="101" value="0" step="1" />
+          <output id="cube-channel-label" for="cube-channel"></output>
+          <div class="cube-tools">
+            <label>Channel A<select id="cube-a"></select></label>
+            <label>Channel B<select id="cube-b"></select></label>
+            <label>Compare<select id="cube-mode"><option value="single">Single channel</option><option value="blink">A/B blink</option><option value="side">Side by side</option><option value="swipe">Swipe</option></select></label>
+            <button id="cube-pan" type="button" aria-pressed="true">Pan</button>
+            <button id="cube-sample" type="button" aria-pressed="false">Select spectrum pixel</button>
+            <button id="cube-fit" type="button">Fit</button>
+            <button id="cube-native" type="button">Native pixels</button>
+            <button id="cube-minus" type="button" aria-label="Zoom cube out">−</button>
+            <button id="cube-plus" type="button" aria-label="Zoom cube in">+</button>
+            <button id="cube-reset" type="button">Reset view</button>
+            <button id="cube-fullscreen" type="button">Fullscreen cube</button>
+          </div>
+          <label for="cube-swipe">Swipe split</label><input id="cube-swipe" type="range" min="0" max="100" value="50" />
+          <div class="cube-tools"><label>Interpolation<select id="cube-interpolation"><option value="nearest">Nearest pixels</option><option value="smooth">Smooth display</option></select></label><label for="cube-contrast">Shared contrast<input id="cube-contrast" type="range" min="0.5" max="2" step="0.1" value="1" /></label><button id="cube-contrast-reset" type="button">Reset cube contrast</button></div>
+          <div id="cube-stage" class="cube-stage"><canvas id="cube-canvas" tabindex="0" aria-label="102-channel cube viewer. Use Pan or Select spectrum pixel; accessible pixel fields and zoom controls follow."></canvas><span id="cube-view-label" role="status"></span><button id="cube-exit-fullscreen" type="button">Exit fullscreen</button></div>
+          <div class="cube-tools">
+            <button id="cube-previous" type="button">Previous wavelength</button><button id="cube-play" type="button" aria-pressed="false">Play wavelengths</button><button id="cube-next" type="button">Next wavelength</button>
+            <label>Interval<select id="cube-speed"><option value="800">0.8 seconds</option><option value="1600">1.6 seconds</option><option value="400">0.4 seconds</option></select></label>
+            <label class="inline"><input id="cube-loop" type="checkbox" checked /> Loop wavelengths</label>
+          </div>
+          <p class="tiny">Compared channels use one shared percentile/asinh display stretch and viewport. This is wavelength comparison of a multi-date mosaic, not time variability or calibrated spectral-response matching.</p>
+          <div id="cube-coverage" class="cube-coverage" aria-label="102 channel coverage"></div>
+          <label class="inline"><input id="cube-hits" type="checkbox" /> Show valid-pixel coverage instead of intensity</label>
+          <p class="tiny">Click the tile to sample that actual mosaic pixel through all channels. Tile orientation is native HPX, not north-up. Transparent pixels have no valid coverage. Per-plane display stretch is not a brightness comparison.</p>
+          <img id="cube-image" hidden alt="Backing image for the selected genuine cube plane" />
+          <label for="cube-x">FITS pixel X (0–511)</label><input id="cube-x" type="number" min="0" max="511" value="256" />
+          <label for="cube-y">FITS pixel Y (0–511)</label><input id="cube-y" type="number" min="0" max="511" value="256" />
+          <button id="cube-extract" type="button">Extract pixel spectrum</button>
+          <button id="cube-extract-source" type="button">Extract at marked source / field position</button>
+          <a id="cube-download">Download original cube FITS</a>
+          <div id="cube-spectrum" aria-live="polite"></div>
+        </div>
+      </details>
+      <details class="wavelength-workbench">
+        <summary>Wavelength atlas · six detector groups</summary>
+        <div id="spectral-coverage"></div>
+      </details>
+      <label for="analysis-tool">Analysis tool</label
+      ><select id="analysis-tool">
+        <option value="motion">Manual apparent motion</option>
+        <option value="spectrum">Spectrum</option>
+        <option value="difference">Subtraction</option>
+        <option value="stack">Stacking</option>
+      </select>
+      <div id="analysis-unavailable" class="warning" hidden></div>
+    </section>
+  </aside>
+</main>
+{% endblock %} {% block scripts %}
+<script type="module" src="{% static 'src/js/explorer.js' %}"></script>
+{% endblock %}

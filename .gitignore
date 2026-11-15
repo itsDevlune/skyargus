@@ -1,0 +1,14 @@
+.venv/
+.venv313/
+.verify-env/
+__pycache__/
+*.py[cod]
+*.sqlite3
+.env
+data/
+node_modules/
+staticfiles/
+.pytest_cache/
+.ruff_cache/
+test-results/
+deploy/certs/

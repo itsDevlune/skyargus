@@ -1,0 +1,17 @@
+Django>=5.2,<5.3
+astropy
+astroquery
+reproject
+numpy
+scipy
+Pillow
+photutils
+requests
+celery
+redis
+psycopg[binary]
+dj-database-url
+gunicorn
+pytest
+pytest-django
+ruff

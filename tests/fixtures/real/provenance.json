@@ -1,0 +1,13 @@
+{
+  "id": "2025W33_2C_0321_1",
+  "release": "DR1",
+  "sha256": "8dfe178f3b3f8ccfd8abe1fbcebf0bc93eecd6156abc62fa3c62b25ab981a493",
+  "real_observation": true,
+  "source": "https://irsa.ipac.caltech.edu/ibe/data/spherex/dr1/level2/2025W33_2C/l2b-v27-2026-228/3/level2_2025W33_2C_0321_1D3_spx_l2b-v27-2026-228.fits",
+  "cutout": {
+    "center": "269.452075,4.693391deg",
+    "size": "9.758073580374354arcmin",
+    "gzip": "false"
+  },
+  "acknowledgement": "See templates/sources.html and docs/SOURCES.md. Public SPHEREx observation, not a synthetic fixture."
+}
