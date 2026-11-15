@@ -1,5 +1,7 @@
 # Deploy Argus to Coolify
 
+**Domain correction:** Django now uses ARGUS_DOMAIN (default skyargus.space) to form its public HTTPS origin. Coolify's SERVICE_URL_PROXY_80/SERVICE_FQDN_PROXY_80 may contain http and an internal port; these are used for routing, not Django host/origin settings. Keep proxy's Coolify domain set to HTTPS on internal port80. Change ARGUS_DOMAIN only to a plain hostname, without scheme, path or port. Expected runtime values: PUBLIC_URL=https://skyargus.space; CSRF_TRUSTED_ORIGINS=https://skyargus.space; ALLOWED_HOSTS includes skyargus.space without :80.
+
 The repository includes a dedicated compose.coolify.yaml. Local Docker configuration and the older manual-TLS production configuration remain separate. No hand-edited certificate files or committed secrets are required.
 
 ## Click-through setup

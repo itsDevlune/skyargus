@@ -10,9 +10,10 @@ x-app: &app
     SECRET_KEY: ${SERVICE_PASSWORD_64_ARGUSSECRET:?Coolify must generate the application secret}
     DATABASE_URL: postgres://argus:${SERVICE_PASSWORD_64_ARGUSDB:?Coolify must generate the database password}@db:5432/argus
     DATA_ROOT: /app/state/artifacts
-    ALLOWED_HOSTS: localhost,127.0.0.1,web,${SERVICE_FQDN_PROXY_80:?Configure the proxy domain}
-    CSRF_TRUSTED_ORIGINS: ${SERVICE_URL_PROXY_80:?Configure an HTTPS proxy domain}
-    PUBLIC_URL: ${SERVICE_URL_PROXY_80:?Configure an HTTPS proxy domain}
+    # Public origin is independent of Coolify's internal routing URL/port.
+    ALLOWED_HOSTS: localhost,127.0.0.1,web,${ARGUS_DOMAIN:-skyargus.space}
+    CSRF_TRUSTED_ORIGINS: https://${ARGUS_DOMAIN:-skyargus.space}
+    PUBLIC_URL: https://${ARGUS_DOMAIN:-skyargus.space}
     ARGUS_SESSION_ACTIVE_JOBS: "0"
     ARGUS_SESSION_JOBS_PER_HOUR: "0"
     ARGUS_QUEUE_LIMIT: "0"
