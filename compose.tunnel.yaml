@@ -1,0 +1,76 @@
+# Standalone small-installation stack. Uses a named Cloudflare Tunnel when
+# CLOUDFLARE_TUNNEL_TOKEN is set in .env (the stable skyargus.space route).
+name: argus-tunnel
+
+x-app: &app
+  build:
+    context: .
+    dockerfile: Dockerfile
+  entrypoint: ["python", "deploy/docker_run.py"]
+  environment:
+    ARGUS_DEBUG: "0"
+    ARGUS_DISPATCH: database
+    DATABASE_URL: sqlite:////app/state/local.sqlite3
+    DATA_ROOT: /app/state/artifacts
+    ALLOWED_HOSTS: localhost,127.0.0.1,web,skyargus.space,www.skyargus.space,.trycloudflare.com
+    CSRF_TRUSTED_ORIGINS: https://skyargus.space,https://www.skyargus.space,https://*.trycloudflare.com
+    ARGUS_SESSION_ACTIVE_JOBS: "0"
+    ARGUS_SESSION_JOBS_PER_HOUR: "0"
+    ARGUS_QUEUE_LIMIT: "0"
+  volumes:
+    - state:/app/state
+    - static-assets:/app/staticfiles
+
+services:
+  init:
+    <<: *app
+    command: ["sh", "-c", "python manage.py migrate --noinput && python manage.py collectstatic --noinput"]
+    restart: "no"
+  web:
+    <<: *app
+    command: ["gunicorn", "argus.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "1", "--threads", "2", "--timeout", "120", "--access-logfile", "-", "--error-logfile", "-"]
+    depends_on:
+      init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/', timeout=5)"]
+      interval: 15s
+      timeout: 6s
+      retries: 5
+      start_period: 20s
+    restart: unless-stopped
+  worker:
+    <<: *app
+    command: ["python", "manage.py", "workjobs", "--recover"]
+    depends_on:
+      init:
+        condition: service_completed_successfully
+    stop_grace_period: 4m
+    restart: unless-stopped
+  proxy:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile.proxy
+    volumes:
+      - static-assets:/srv/static:ro
+    depends_on:
+      web:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/health/"]
+      interval: 15s
+      timeout: 6s
+      retries: 5
+    restart: unless-stopped
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    # Create a tunnel in Cloudflare and place its token in .env.
+    command: ["tunnel", "--no-autoupdate", "run", "--token", "${CLOUDFLARE_TUNNEL_TOKEN:?Set CLOUDFLARE_TUNNEL_TOKEN in .env}"]
+    depends_on:
+      proxy:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  state:
+  static-assets:
