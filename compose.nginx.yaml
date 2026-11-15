@@ -1,0 +1,6 @@
+# Host-Nginx profile. Argus is reachable only from the VPS itself; host Nginx
+# terminates TLS and proxies skyargus.space to 127.0.0.1:8080.
+services:
+  proxy:
+    ports:
+      - "127.0.0.1:8080:80"

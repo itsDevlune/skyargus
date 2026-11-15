@@ -2,6 +2,8 @@
 
 **Standalone VPS + Cloudflare:** put `CLOUDFLARE_TUNNEL_TOKEN` in `.env`, then run `docker compose -f compose.tunnel.yaml up --build -d`. Configure the tunnel hostname `skyargus.space` to service `proxy:80`. See [docs/CLOUDFLARED.md](docs/CLOUDFLARED.md). Docker runtime verification is still pending on a Docker-enabled host.
 
+**Host Nginx instead of Cloudflare Tunnel:** run the overlay `docker compose -f compose.tunnel.yaml -f compose.nginx.yaml up --build -d`, then configure the VPS Nginx reverse proxy as described in [docs/NGINX_REVERSE_PROXY.md](docs/NGINX_REVERSE_PROXY.md).
+
 **Coolify:** select the Docker Compose build pack and `/compose.coolify.yaml`, then assign an HTTPS domain to the `proxy` service (internal port80). Coolify generates the two secrets. Setup and deployment checks: [docs/COOLIFY.md](docs/COOLIFY.md). Docker/Coolify runtime verification has not been performed on this authoring machine.
 
 A working Django workspace for real infrared sky observations and reproducible evidence. **Development build; the full requested release is not complete.**
