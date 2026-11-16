@@ -5,6 +5,8 @@ __pycache__/
 *.py[cod]
 *.sqlite3
 .env
+.vps.env
+*.vps.env
 data/
 node_modules/
 staticfiles/
